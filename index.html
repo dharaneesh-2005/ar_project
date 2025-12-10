@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AR Voice Privacy Demo</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Courier New', monospace; background: #000; }
+        #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.95); color: #0ff; text-align: center; padding: 20px; box-sizing: border-box; }
+        .ui-content { max-width: 500px; }
+        button { background: #0ff; color: #000; border: 2px solid #0ff; padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; margin: 10px; box-shadow: 0 0 20px #0ff; }
+        button:active { background: #000; color: #0ff; }
+        .hidden { display: none; }
+        h2 { margin: 10px 0; color: #f0f; text-shadow: 0 0 10px #f0f; font-size: 32px; }
+        p { line-height: 1.6; font-size: 18px; }
+        #transcript-box { background: #111; border: 2px solid #0ff; padding: 15px; margin: 20px 0; color: #0ff; text-shadow: 0 0 5px #0ff; }
+        .neon-text { color: #f0f; text-shadow: 0 0 10px #f0f, 0 0 20px #f0f; }
+        #audio-player { margin: 20px 0; }
+        #voice-chat { position: fixed !important; bottom: 30px !important; left: 20px !important; background: rgba(0,0,0,0.95) !important; border: 3px solid #0ff !important; padding: 20px 25px !important; color: #0ff !important; font-size: 22px !important; border-radius: 10px !important; z-index: 99999 !important; box-shadow: 0 0 30px #0ff !important; max-width: 350px !important; font-weight: bold !important; display: block !important; }
+    </style>
+</head>
+<body>
+    <a-scene>
+        <a-sky color="#001122"></a-sky>
+        <a-entity camera look-controls="magicWindowTrackingEnabled: true"></a-entity>
+        
+        <!-- Enemy target -->
+        <a-box id="enemy" position="0 1.5 -5" rotation="0 45 0" color="#ff0000" 
+               animation="property: rotation; to: 0 405 0; loop: true; dur: 4000">
+            <a-text value="ENEMY" align="center" position="0 1 0" scale="2 2 2"></a-text>
+        </a-box>
+        
+        <!-- Environment -->
+        <a-cylinder position="1 0.5 -3" radius="0.5" height="1.5" color="#4CC3D9"></a-cylinder>
+        <a-cylinder position="-1 0.5 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+        <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
+    </a-scene>
+
+    <!-- UI Overlays -->
+    <div id="intro-screen" class="ui-overlay">
+        <div class="ui-content">
+            <h2>🎮 AR COMBAT SIM</h2>
+            <p>Move your device to look around.</p>
+            <p style="font-size: 14px; color: #888;">Microphone access required</p>
+            <button onclick="startGame()">START MISSION</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="ui-overlay hidden">
+        <div class="ui-content">
+            <h2 class="neon-text">⚠️ VOICE DATA CAPTURED</h2>
+            <p><strong>Your voice has been:</strong></p>
+            <p>✓ Recorded and stored<br>✓ Transcribed and analyzed<br>✓ Ready for replication</p>
+            <div id="transcript-box">
+                <strong>TRANSCRIPT:</strong><br>
+                <span id="transcript"></span>
+            </div>
+            <audio id="audio-player" controls></audio>
+            <p class="neon-text" style="font-size: 20px; margin-top: 20px;">This is how easily any platform can capture your voice.</p>
+            <button onclick="location.reload()">RESTART</button>
+        </div>
+    </div>
+
+    <!-- Voice Chat Box (must be after overlays to appear on top) -->
+    <div id="voice-chat" class="hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
