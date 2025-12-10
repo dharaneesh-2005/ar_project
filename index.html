@@ -8,62 +8,95 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Courier New', monospace; background: #000; }
         #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.95); color: #0ff; text-align: center; padding: 20px; box-sizing: border-box; }
-        .ui-content { max-width: 500px; }
-        button { background: #0ff; color: #000; border: 2px solid #0ff; padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; margin: 10px; box-shadow: 0 0 20px #0ff; }
+        .ui-content { max-width: 600px; }
+        button { background: #0ff; color: #000; border: 2px solid #0ff; padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; margin: 10px; box-shadow: 0 0 20px #0ff; transition: all 0.3s; }
+        button:hover { transform: scale(1.05); }
         button:active { background: #000; color: #0ff; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         h2 { margin: 10px 0; color: #f0f; text-shadow: 0 0 10px #f0f; font-size: 32px; }
         p { line-height: 1.6; font-size: 18px; }
-        #transcript-box { background: #111; border: 2px solid #0ff; padding: 15px; margin: 20px 0; color: #0ff; text-shadow: 0 0 5px #0ff; }
+        #transcript-box { background: #111; border: 2px solid #0ff; padding: 15px; margin: 20px 0; color: #0ff; text-shadow: 0 0 5px #0ff; min-height: 60px; }
         .neon-text { color: #f0f; text-shadow: 0 0 10px #f0f, 0 0 20px #f0f; }
         #audio-player { margin: 20px 0; }
-        #voice-chat { position: fixed !important; bottom: 30px !important; left: 20px !important; background: rgba(0,0,0,0.95) !important; border: 3px solid #0ff !important; padding: 20px 25px !important; color: #0ff !important; font-size: 22px !important; border-radius: 10px !important; z-index: 99999 !important; box-shadow: 0 0 30px #0ff !important; max-width: 350px !important; font-weight: bold !important; display: block !important; }
+        a-scene { display: none; }
+        a-scene.active { display: block; }
+        #voice-chat { position: fixed; top: 20px; left: 20px; background: rgba(0,20,0,0.95); border: 3px solid #0f0; padding: 15px 20px; color: #0f0; font-size: 18px; border-radius: 8px; z-index: 999; box-shadow: 0 0 30px rgba(0,255,0,0.8); max-width: 350px; font-weight: bold; display: block; }
+        #voice-chat.hidden { display: none; }
+        #voice-chat::before { content: '🎮 TEAMMATE:'; display: block; font-size: 14px; margin-bottom: 8px; opacity: 0.8; letter-spacing: 2px; }
+        #crosshair { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; z-index: 100; pointer-events: none; }
+        #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #0f0; }
+        #crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+        #crosshair::after { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }
+        .warning-list { text-align: left; margin: 20px auto; max-width: 500px; }
+        .warning-list li { margin: 10px 0; color: #ff0; }
+        
+        /* Valorant HUD */
+        #game-hud { position: fixed; bottom: 0; left: 0; right: 0; z-index: 500; pointer-events: none; }
+        #game-hud.hidden { display: none; }
+        #health-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 200px; height: 8px; background: rgba(255,255,255,0.2); border: 2px solid #0ff; border-radius: 4px; }
+        #health-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #0ff, #00ff88); border-radius: 2px; }
+        #ammo { position: fixed; bottom: 30px; right: 40px; color: #fff; font-size: 32px; font-weight: bold; text-shadow: 0 0 10px #0ff; }
+        #minimap { position: fixed; top: 80px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.7); border: 3px solid #0ff; border-radius: 8px; }
+        #minimap::before { content: 'MAP'; position: absolute; top: -25px; right: 0; color: #0ff; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <a-scene>
-        <a-sky color="#001122"></a-sky>
-        <a-entity camera look-controls="magicWindowTrackingEnabled: true"></a-entity>
+    <a-scene id="ar-scene">
+        <!-- 360° HDRI Panoramic Environment -->
+        <a-sky src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/city.jpg" rotation="-70 -10 0"></a-sky>
         
-        <!-- Enemy target -->
-        <a-box id="enemy" position="0 1.5 -5" rotation="0 45 0" color="#ff0000" 
-               animation="property: rotation; to: 0 405 0; loop: true; dur: 4000">
-            <a-text value="ENEMY" align="center" position="0 1 0" scale="2 2 2"></a-text>
-        </a-box>
-        
-        <!-- Environment -->
-        <a-cylinder position="1 0.5 -3" radius="0.5" height="1.5" color="#4CC3D9"></a-cylinder>
-        <a-cylinder position="-1 0.5 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-        <a-plane position="0 0 -4" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
+        <a-entity camera look-controls="magicWindowTrackingEnabled: true; pointerLockEnabled: false" 
+                  position="0 -20 0" rotation="0 0 0"></a-entity>
     </a-scene>
 
     <!-- UI Overlays -->
     <div id="intro-screen" class="ui-overlay">
         <div class="ui-content">
-            <h2>🎮 AR COMBAT SIM</h2>
-            <p>Move your device to look around.</p>
-            <p style="font-size: 14px; color: #888;">Microphone access required</p>
-            <button onclick="startGame()">START MISSION</button>
+            <h2>🎮 AR COMBAT SIMULATOR</h2>
+            <p>Experience an immersive tactical shooter simulation.</p>
+            <p>Move your device to look around the battlefield.</p>
+            <p style="font-size: 14px; color: #888; margin-top: 20px;">⚠️ Microphone access required for team communication</p>
+            <button onclick="startGame()">🎯 START MISSION</button>
         </div>
     </div>
 
     <div id="result-screen" class="ui-overlay hidden">
         <div class="ui-content">
-            <h2 class="neon-text">⚠️ VOICE DATA CAPTURED</h2>
-            <p><strong>Your voice has been:</strong></p>
-            <p>✓ Recorded and stored<br>✓ Transcribed and analyzed<br>✓ Ready for replication</p>
+            <h2 class="neon-text">⚠️ MISSION COMPLETE - VOICE DATA CAPTURED</h2>
+            <p style="color: #ff0; font-size: 20px;"><strong>Your voice has been collected and processed.</strong></p>
             <div id="transcript-box">
-                <strong>TRANSCRIPT:</strong><br>
+                <strong>TRANSCRIBED TEXT:</strong><br>
                 <span id="transcript"></span>
             </div>
-            <audio id="audio-player" controls></audio>
-            <p class="neon-text" style="font-size: 20px; margin-top: 20px;">This is how easily any platform can capture your voice.</p>
-            <button onclick="location.reload()">RESTART</button>
+            <audio id="audio-player" controls style="width: 100%;"></audio>
+            
+            <div style="margin-top: 30px; border-top: 2px solid #f0f; padding-top: 20px;">
+                <h2 class="neon-text" style="font-size: 24px;">🚨 HOW YOUR VOICE CAN BE MISUSED</h2>
+                <ul class="warning-list">
+                    <li><strong>Voice Cloning:</strong> AI can replicate your voice with just seconds of audio</li>
+                    <li><strong>Deepfake Scams:</strong> Criminals can impersonate you to deceive family/friends</li>
+                    <li><strong>Financial Fraud:</strong> Fake voice calls to authorize transactions</li>
+                    <li><strong>Identity Theft:</strong> Bypass voice authentication systems</li>
+                    <li><strong>Misinformation:</strong> Create fake audio statements attributed to you</li>
+                </ul>
+                <p class="neon-text" style="font-size: 18px; margin-top: 20px;">This demo shows how easily games and apps can capture your voice data. Always be cautious about granting microphone permissions.</p>
+            </div>
+            <button onclick="location.reload()">🔄 RESTART DEMO</button>
         </div>
     </div>
 
-    <!-- Voice Chat Box (must be after overlays to appear on top) -->
+    <!-- Crosshair -->
+    <div id="crosshair" class="hidden"></div>
+    
+    <!-- Voice Chat Box -->
     <div id="voice-chat" class="hidden"></div>
+    
+    <!-- Game HUD -->
+    <div id="game-hud" class="hidden">
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <div id="ammo">25 / 100</div>
+        <div id="minimap"></div>
+    </div>
 
     <script src="app.js"></script>
 </body>
