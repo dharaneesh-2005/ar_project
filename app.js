@@ -23,19 +23,14 @@ async function startGame() {
     
     setTimeout(() => {
         console.log('TIMEOUT TRIGGERED - About to show voice chat');
-        const messages = [
-            "Hey, do you see the enemy?",
-            "Where is he? Can you spot him?",
-            "I need your position report!"
-        ];
-        const msg = messages[Math.floor(Math.random() * messages.length)];
+        const msg = "Hey, did you spot the enemies? If yes, tell me where they are… And tell me if you think you can handle them alone.";
         console.log('Showing voice chat:', msg);
         showVoiceChat(msg);
-        speak(msg);
+        playAudio('https://res.cloudinary.com/dcamnqa7q/video/upload/v1765467221/audio_enemy_asking_sgpqtx.mp3');
         setTimeout(() => {
             console.log('Starting recording now...');
             startRecording();
-        }, 2000);
+        }, 8000);
     }, 2000);
     
     console.log('startGame function completed');
@@ -51,12 +46,9 @@ function showVoiceChat(text) {
     console.log('Voice chat should be visible now');
 }
 
-function speak(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.1;
-    utterance.pitch = 0.9;
-    utterance.volume = 0.8;
-    speechSynthesis.speak(utterance);
+function playAudio(url) {
+    const audio = new Audio(url);
+    audio.play();
 }
 
 async function startRecording() {
@@ -65,8 +57,23 @@ async function startRecording() {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
         
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyzer = audioContext.createAnalyser();
+        analyzer.fftSize = 512;
+        source.connect(analyzer);
+        
+        const bufferLength = analyzer.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
+        let silenceStart = null;
+        let hasSpoken = false;
+        const SILENCE_THRESHOLD = 30;
+        const SILENCE_DURATION = 2000;
+        const MAX_RECORDING_TIME = 20000;
+        const recordingStartTime = Date.now();
 
         mediaRecorder.ondataavailable = (event) => {
             audioChunks.push(event.data);
@@ -75,18 +82,47 @@ async function startRecording() {
         mediaRecorder.onstop = async () => {
             audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             document.getElementById('voice-chat').classList.add('hidden');
-            await uploadAudio(audioBlob);
+            audioContext.close();
+            
+            if (hasSpoken) {
+                await uploadAudio(audioBlob);
+            } else {
+                showSecureMessage();
+            }
         };
 
         mediaRecorder.start();
         showVoiceChat("🎤 Listening... Speak now!");
         
-        setTimeout(() => {
-            if (mediaRecorder.state === 'recording') {
+        const checkAudio = () => {
+            if (mediaRecorder.state !== 'recording') return;
+            
+            if (Date.now() - recordingStartTime > MAX_RECORDING_TIME) {
                 mediaRecorder.stop();
                 stream.getTracks().forEach(track => track.stop());
+                return;
             }
-        }, 6000);
+            
+            analyzer.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+            
+            if (average > SILENCE_THRESHOLD) {
+                hasSpoken = true;
+                silenceStart = null;
+            } else if (hasSpoken) {
+                if (!silenceStart) {
+                    silenceStart = Date.now();
+                } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+                    mediaRecorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+            }
+            
+            requestAnimationFrame(checkAudio);
+        };
+        
+        checkAudio();
     } catch (error) {
         alert('Microphone error: ' + error.message);
     }
@@ -114,9 +150,40 @@ function showResult(transcript, audioBlob) {
     document.getElementById('crosshair').classList.add('hidden');
     document.getElementById('game-hud').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('hidden');
+    
+    const resultScreen = document.getElementById('result-screen');
+    const capturedCard = resultScreen.querySelector('.captured-card');
+    const warningCard = resultScreen.querySelector('.warning-card');
+    
+    capturedCard.style.display = 'block';
+    warningCard.style.display = 'block';
+    
     document.getElementById('transcript').textContent = transcript || '[Unable to transcribe - but audio was still captured]';
     
     const audioPlayer = document.getElementById('audio-player');
     audioPlayer.src = URL.createObjectURL(audioBlob);
     audioPlayer.load();
+}
+
+function showSecureMessage() {
+    document.getElementById('ar-scene').classList.remove('active');
+    document.getElementById('crosshair').classList.add('hidden');
+    document.getElementById('game-hud').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('hidden');
+    
+    const resultScreen = document.getElementById('result-screen');
+    const title = resultScreen.querySelector('.result-title');
+    const subtitle = resultScreen.querySelector('.result-subtitle');
+    const capturedCard = resultScreen.querySelector('.captured-card');
+    const warningCard = resultScreen.querySelector('.warning-card');
+    
+    title.textContent = '✅ MISSION COMPLETE - NO DATA CAPTURED';
+    title.style.color = '#0f0';
+    title.style.textShadow = '0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0';
+    
+    subtitle.textContent = 'Your voice data is secure. No audio was processed.';
+    subtitle.style.color = '#0f0';
+    
+    capturedCard.style.display = 'none';
+    warningCard.style.display = 'none';
 }

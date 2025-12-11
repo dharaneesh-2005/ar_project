@@ -14,14 +14,16 @@ app.use(express.static('.'));
 app.post('/api/process-voice', upload.single('audio'), async (req, res) => {
     try {
         const audioPath = req.file.path;
+        const newPath = audioPath + '.webm';
+        fs.renameSync(audioPath, newPath);
         
         const transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(audioPath),
+            file: fs.createReadStream(newPath),
             model: 'whisper-large-v3',
             response_format: 'json'
         });
 
-        fs.unlinkSync(audioPath);
+        fs.unlinkSync(newPath);
 
         res.json({
             transcript: transcription.text,
