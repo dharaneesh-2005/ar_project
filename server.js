@@ -4,26 +4,28 @@ const multer = require('multer');
 const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ storage: multer.memoryStorage() });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 app.use(express.static('.'));
 
 app.post('/api/process-voice', upload.single('audio'), async (req, res) => {
     try {
-        const audioPath = req.file.path;
-        const newPath = audioPath + '.webm';
-        fs.renameSync(audioPath, newPath);
+        const tmpDir = os.tmpdir();
+        const audioPath = path.join(tmpDir, `audio-${Date.now()}.webm`);
+        
+        fs.writeFileSync(audioPath, req.file.buffer);
         
         const transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(newPath),
+            file: fs.createReadStream(audioPath),
             model: 'whisper-large-v3',
             response_format: 'json'
         });
 
-        fs.unlinkSync(newPath);
+        fs.unlinkSync(audioPath);
 
         res.json({
             transcript: transcription.text,
