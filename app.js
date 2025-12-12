@@ -82,8 +82,8 @@ async function startRecording() {
         audioChunks = [];
         let silenceStart = null;
         let hasSpoken = false;
-        const SILENCE_THRESHOLD = 50;
-        const SPEECH_THRESHOLD = 60;
+        const SILENCE_THRESHOLD = 25;
+        const SPEECH_THRESHOLD = 35;
         const SILENCE_DURATION = 2000;
         const MAX_RECORDING_TIME = 10000;
         const recordingStartTime = Date.now();
