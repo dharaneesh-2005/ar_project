@@ -22,7 +22,9 @@ app.post('/api/process-voice', upload.single('audio'), async (req, res) => {
         const transcription = await groq.audio.transcriptions.create({
             file: fs.createReadStream(audioPath),
             model: 'whisper-large-v3',
-            response_format: 'json'
+            response_format: 'json',
+            prompt: 'Transcribe only clear human speech. Ignore background noise, music, and ambient sounds.',
+            temperature: 0
         });
 
         fs.unlinkSync(audioPath);

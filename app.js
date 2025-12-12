@@ -8,7 +8,13 @@ console.log('app.js loaded successfully');
 async function startGame() {
     console.log('START GAME CLICKED!');
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
         console.log('Microphone access granted');
     } catch (error) {
         alert('⚠️ Microphone access required for team communication');
@@ -54,7 +60,13 @@ function playAudio(url) {
 async function startRecording() {
     try {
         if (!stream) {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
         }
         
         const audioContext = new AudioContext();
@@ -70,7 +82,8 @@ async function startRecording() {
         audioChunks = [];
         let silenceStart = null;
         let hasSpoken = false;
-        const SILENCE_THRESHOLD = 30;
+        const SILENCE_THRESHOLD = 50;
+        const SPEECH_THRESHOLD = 60;
         const SILENCE_DURATION = 2000;
         const MAX_RECORDING_TIME = 10000;
         const recordingStartTime = Date.now();
@@ -106,10 +119,10 @@ async function startRecording() {
             analyzer.getByteFrequencyData(dataArray);
             const average = dataArray.reduce((a, b) => a + b) / bufferLength;
             
-            if (average > SILENCE_THRESHOLD) {
+            if (average > SPEECH_THRESHOLD) {
                 hasSpoken = true;
                 silenceStart = null;
-            } else if (hasSpoken) {
+            } else if (hasSpoken && average < SILENCE_THRESHOLD) {
                 if (!silenceStart) {
                     silenceStart = Date.now();
                 } else if (Date.now() - silenceStart > SILENCE_DURATION) {
