@@ -19,10 +19,10 @@ async function startGame() {
     document.getElementById('ar-scene').classList.add('active');
     document.getElementById('crosshair').classList.remove('hidden');
     document.getElementById('game-hud').classList.remove('hidden');
-    console.log('Intro hidden, AR scene shown, waiting 2 seconds...');
+    console.log('Intro hidden, AR scene shown, waiting 10 seconds for exploration...');
     
     setTimeout(() => {
-        console.log('TIMEOUT TRIGGERED - About to show voice chat');
+        console.log('Exploration time over - showing voice chat');
         const msg = "Hey, did you spot the enemies? If yes, tell me where they are… And tell me if you think you can handle them alone.";
         console.log('Showing voice chat:', msg);
         showVoiceChat(msg);
@@ -31,7 +31,7 @@ async function startGame() {
             console.log('Starting recording now...');
             startRecording();
         }, 8000);
-    }, 2000);
+    }, 10000);
     
     console.log('startGame function completed');
 }
@@ -72,7 +72,7 @@ async function startRecording() {
         let hasSpoken = false;
         const SILENCE_THRESHOLD = 30;
         const SILENCE_DURATION = 2000;
-        const MAX_RECORDING_TIME = 20000;
+        const MAX_RECORDING_TIME = 10000;
         const recordingStartTime = Date.now();
 
         mediaRecorder.ondataavailable = (event) => {
